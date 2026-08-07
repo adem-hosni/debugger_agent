@@ -130,6 +130,7 @@ funcs::Array funcs::collect_regions(HANDLE hProcess)
                 DWORD rva = 0, size = 0;
                 if (get_code_section(hProcess, mbi.AllocationBase, rva, size) && size > 0)
                 {
+                    printf("found code section \n");
                     entry.BaseAddress = (BYTE*)mbi.AllocationBase + rva;
                     entry.RegionSize = size;
                 }
