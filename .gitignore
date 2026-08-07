@@ -125,3 +125,9 @@ Testing/
 .cache/
 
 output/
+*.tlog
+*.ipdb
+*.iobj
+*.recipe
+build/
+cache/
