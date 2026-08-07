@@ -18,6 +18,13 @@ MEMORY_API char* disassemble_region(HANDLE hProcess, SIZE_T size, ULONG_PTR addr
 	return funcs::disassemble_region(hProcess, size, address);
 }
 
+MEMORY_API void patch_bytes(HANDLE hProcess, LPVOID lpAddress, const char* bytes, size_t size)
+{
+	return funcs::patch_bytes(hProcess, lpAddress, bytes, size);
+}
+
+
+
 int main()
 {
 	return 0;

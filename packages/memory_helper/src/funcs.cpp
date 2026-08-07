@@ -242,3 +242,13 @@ char* funcs::disassemble_region(HANDLE hProcess, SIZE_T size, ULONG_PTR address)
         memcpy(result, output.c_str(), output.size() + 1);
     return result;
 }
+
+void funcs::patch_bytes(HANDLE hProcess, LPVOID lpAddress, const char* bytes, SIZE_T size)
+{
+    DWORD dwOldProtect = NULL;
+    VirtualProtectEx(hProcess, (LPVOID)lpAddress, size, PAGE_EXECUTE_READWRITE, &dwOldProtect);
+
+    WriteProcessMemory(hProcess, (LPVOID)lpAddress, bytes, size, NULL);
+
+    VirtualProtectEx(hProcess, (LPVOID)lpAddress, size, dwOldProtect, &dwOldProtect);
+}

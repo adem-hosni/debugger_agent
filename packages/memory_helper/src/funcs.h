@@ -15,4 +15,5 @@ namespace funcs
     HANDLE open_process(DWORD process_id);
     Array  collect_regions(HANDLE hProcess);
     char*  disassemble_region(HANDLE hProcess, SIZE_T size, ULONG_PTR start_address);
+    void   patch_bytes(HANDLE hProcess, LPVOID address, const char* bytes, SIZE_T size);
 }            // namespace funcs

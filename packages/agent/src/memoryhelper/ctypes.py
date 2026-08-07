@@ -8,6 +8,7 @@ CHAR_PTR = ctypes.c_char_p
 INT = ctypes.c_int
 LONG = ctypes.c_long
 ULONG_PTR = ctypes.c_ulonglong
+LPVOID = wintypes.LPVOID
 
 
 class MEMORY_BASIC_INFORMATION(ctypes.Structure):
