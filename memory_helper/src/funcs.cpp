@@ -182,8 +182,7 @@ char* funcs::disassemble_region(HANDLE hProcess, SIZE_T size, ULONG_PTR address)
     while (offset < size)
     {
         DWORD      ip = static_cast<DWORD>(address) + static_cast<DWORD>(offset);
-        ZyanStatus status =
-            ZydisDisassembleIntel(ZYDIS_MACHINE_MODE_LONG_COMPAT_32, ip, reinterpret_cast<const uint8_t*>(buffer) + offset, size - offset, &instr);
+        ZyanStatus status = ZydisDisassembleIntel(ZYDIS_MACHINE_MODE_LONG_64, ip, reinterpret_cast<const uint8_t*>(buffer) + offset, size - offset, &instr);
 
         if (!ZYAN_SUCCESS(status))
         {
