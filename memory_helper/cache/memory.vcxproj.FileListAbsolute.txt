@@ -1,4 +1,0 @@
-C:\Users\hosni\source\repos\memory\build\Zydis.dll
-C:\Users\hosni\source\repos\memory\cache\memory.vcxproj.Up2Date
-C:\Users\hosni\source\repos\debugger_agent\memory_helper\build\Zydis.dll
-C:\Users\hosni\source\repos\debugger_agent\memory_helper\cache\memory.vcxproj.Up2Date
