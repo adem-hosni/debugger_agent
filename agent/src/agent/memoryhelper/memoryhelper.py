@@ -77,7 +77,7 @@ class MemoryHelper:
         return self.c_collect_regions(self._target_handle)
 
     def disassemble_regions(self, regions: MemoryRegionsList):
-        with suppress(FileNotFoundError):
+        with suppress(FileNotFoundError, PermissionError):
             shutil.rmtree(self.working_directory)
         os.makedirs(self.working_directory, exist_ok=True)
         regions_per_thread = regions.len // 4
@@ -115,7 +115,6 @@ class MemoryHelper:
                     self, ULONG_PTR(r.BaseAddress), SIZE_T(r.RegionSize)
                 )
                 if asm_result:
-                    print(asm_result)
                     codes.append((r, asm_result))
 
         for r, code in codes:
@@ -133,6 +132,8 @@ class MemoryHelper:
                     "code": code.decode(),
                 }
             )
+            with open(f"{self.working_directory}/0x{r.BaseAddress:X}.asm", "w") as f:
+                f.write(code.decode())
 
     def get_last_error(self) -> int:
         return ctypes.GetLastError()
