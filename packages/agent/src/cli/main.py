@@ -7,9 +7,9 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.prompt import Prompt
 
-from packages.agent.src.agent.agents.factory import create_agent_with_config
-from packages.agent.src.agent.config.settings import get_settings
-from packages.agent.src.agent.tools.builtin import get_default_tools
+from packages.agent.src.agents.factory import create_agent_with_config
+from packages.agent.src.config.settings import get_settings
+from packages.agent.src.tools.builtin import get_default_tools
 
 app = typer.Typer(
     name="agent",

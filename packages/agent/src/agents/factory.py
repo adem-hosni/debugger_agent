@@ -4,7 +4,7 @@ from deepagents import create_deep_agent
 from langchain_core.language_models import BaseChatModel
 from langchain_core.tools import BaseTool
 
-from packages.agent.src.agent.config.settings import AgentConfig, ModelConfig, get_settings
+from packages.agent.src.config.settings import AgentConfig, ModelConfig, get_settings
 
 
 def load_system_prompt(prompt_file: str) -> str:

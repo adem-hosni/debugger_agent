@@ -1,4 +1,4 @@
-from packages.agent.src.agent.memoryhelper.memoryhelper import MemoryHelper
+from memoryhelper.memoryhelper import MemoryHelper
 
 def main():
     mem_helper = MemoryHelper()
