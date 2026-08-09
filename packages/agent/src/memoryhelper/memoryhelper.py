@@ -18,7 +18,7 @@ MemoryRegionsList = list[MEMORY_BASIC_INFORMATION]
 class MemoryHelper:
     def __init__(self):
         self.memory_mod = ctypes.CDLL(
-            r"C:\Users\hosni\source\repos\debugger_agent\memory_helper\build\memory.dll"
+            r"C:\Users\hosni\source\repos\debugger_agent\packages\memory_helper\build\memory.dll"
         )
         self._target_pe_hash: str | None = None
         self.working_directory: str | None = None
@@ -104,7 +104,7 @@ class MemoryHelper:
         with open(f"{self.working_directory}/mem_dump.json", "w") as f:
             f.write(json.dumps(results, indent=4))
         return results
-    
+
     def patch_bytes_from_addr(self, address: LPVOID, bytes_: CHAR_PTR, size: SIZE_T):
         return self.c_patch_bytes(self._target_handle, address, bytes_, size)
 
