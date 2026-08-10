@@ -15,7 +15,7 @@ extern "C"
     MEMORY_API HANDLE open_process(DWORD process_id);
     MEMORY_API funcs::Array collect_regions(HANDLE hProcess);
     MEMORY_API char*        disassemble_region(HANDLE hProcess, SIZE_T size, ULONG_PTR start_address);
-    MEMORY_API void        patch_bytes(HANDLE hProcess, LPVOID lpAddress, const char* bytes, size_t size);
+    MEMORY_API void         patch_bytes(HANDLE hProcess, LPVOID lpAddress, const char* bytes, size_t size);
 
 #ifdef __cplusplus
 }
