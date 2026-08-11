@@ -1,15 +1,12 @@
-#include "funcs.h"
 #include <string>
 #include <vector>
+#include <Windows.h>
 #include <Psapi.h>
+#include "funcs.h"
+
+#include "utils.h"
 
 #define NT_SUCCESS(Status) (((NTSTATUS)(Status)) >= 0)
-
-struct ModuleRange
-{
-    uintptr_t base;
-    uintptr_t size;
-};
 
 HANDLE funcs::open_process(DWORD process_id)
 {
@@ -52,35 +49,11 @@ bool get_code_section(HANDLE hProcess, PVOID base, DWORD& outRva, DWORD& outSize
     return false;
 }
 
-// Returns just the main module (index 0 from EnumProcessModules is always the process's own exe).
-std::vector<ModuleRange> GetMainModuleRange(HANDLE hProcess)
-{
-    std::vector<ModuleRange> modules;
-    HMODULE                  hMods[1];
-    DWORD                    cbNeeded;
 
-    if (EnumProcessModules(hProcess, hMods, sizeof(hMods), &cbNeeded))
-    {
-        MODULEINFO mi;
-        if (GetModuleInformation(hProcess, hMods[0], &mi, sizeof(mi)))
-            modules.push_back({reinterpret_cast<uintptr_t>(mi.lpBaseOfDll), mi.SizeOfImage});
-    }
-    return modules;
-}
-
-bool IsAddressInModule(std::vector<ModuleRange>& modules, uintptr_t addr)
-{
-    for (auto& m : modules)
-    {
-        if (addr >= m.base && addr < m.base + m.size)
-            return true;
-    }
-    return false;
-}
 
 funcs::Array funcs::collect_regions(HANDLE hProcess)
 {
-    auto ranges = GetMainModuleRange(hProcess);
+    auto modules = utils::GetModulesRanges(hProcess);
 
     Array result{};
     if (hProcess == nullptr || hProcess == INVALID_HANDLE_VALUE)
@@ -119,7 +92,7 @@ funcs::Array funcs::collect_regions(HANDLE hProcess)
         // but only keep MEM_IMAGE regions that belong to the main module (skip system DLLs).
         if (ok && mbi.Type == MEM_IMAGE)
         {
-            ok = IsAddressInModule(ranges, reinterpret_cast<uintptr_t>(mbi.BaseAddress));
+            ok = utils::IsAddressInModule(modules, reinterpret_cast<uintptr_t>(mbi.BaseAddress));
         }
 
         if (ok)
@@ -130,7 +103,6 @@ funcs::Array funcs::collect_regions(HANDLE hProcess)
                 DWORD rva = 0, size = 0;
                 if (get_code_section(hProcess, mbi.AllocationBase, rva, size) && size > 0)
                 {
-                    printf("found code section \n");
                     entry.BaseAddress = (BYTE*)mbi.AllocationBase + rva;
                     entry.RegionSize = size;
                 }
