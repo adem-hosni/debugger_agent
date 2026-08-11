@@ -1,7 +1,6 @@
 from langchain_core.tools import tool
 
 
-
 @tool
 def calculate(expression: str) -> str:
     """Evaluate a mathematical expression safely."""
@@ -36,7 +35,6 @@ def calculate(expression: str) -> str:
         return str(result)
     except Exception as e:
         return f"Error: {e}"
-
 
 
 def get_default_tools() -> list:
