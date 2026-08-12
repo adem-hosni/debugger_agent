@@ -10,7 +10,7 @@ namespace funcmap_builder
         std::map<DWORD64, stFunctionMap> subFunctions{};
     };
 
-    BYTE*         parse_entrypoint(BYTE* filebuffer);
+    BYTE*         parse_entrypoint(HMODULE hModule, BYTE* filebuffer);
     stFunctionMap map_functions(DWORD64 dwRuntimeAddress, void* buffer);
 
     stFunctionMap build_funcmap(HANDLE hProcess);

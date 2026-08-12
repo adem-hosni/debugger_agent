@@ -1,9 +1,11 @@
+#define _CRT_SECURE_NO_WARNINGS
+
 #include <fstream>
 #include <sstream>
 #include "funcmap_builder.h"
 #include "utils.h"
 
-BYTE* funcmap_builder::parse_entrypoint(BYTE* filebuffer)
+BYTE* funcmap_builder::parse_entrypoint(HMODULE hModule, BYTE* filebuffer)
 {
     IMAGE_DOS_HEADER* dosHeader = (IMAGE_DOS_HEADER*)filebuffer;
     if (dosHeader->e_magic != IMAGE_DOS_SIGNATURE)
@@ -25,7 +27,7 @@ BYTE* funcmap_builder::parse_entrypoint(BYTE* filebuffer)
 
     BYTE* entryBytes = filebuffer + fileOffset;
 
-    return entryBytes;
+    return (DWORD64)hModule, entryBytes;
 }
 
 funcmap_builder::stFunctionMap funcmap_builder::map_functions(DWORD64 dwRuntimeAddress, void* buffer)
@@ -43,6 +45,7 @@ funcmap_builder::stFunctionMap funcmap_builder::map_functions(DWORD64 dwRuntimeA
     ZydisDecodedOperand     operands[ZYDIS_MAX_OPERAND_COUNT];
 
     std::string output;
+
     for (int i = 0; i < 20 && ZYAN_SUCCESS(ZydisDecoderDecodeFull(&decoder, buffer, 0x20, &instr, operands)); i++)
     {
         char buf[256];
@@ -86,9 +89,10 @@ funcmap_builder::stFunctionMap funcmap_builder::build_funcmap(HANDLE hProcess)
         std::ostringstream ss;
         ss << file.rdbuf();
         const char* filebuffer = ss.str().c_str();
-        BYTE*       entrypoint_address = parse_entrypoint((BYTE*)filebuffer);
+        BYTE*       entrypoint_address = parse_entrypoint((HMODULE)mods[0].base, (BYTE*)filebuffer);
+        printf("entrypoint_address: %p\n", entrypoint_address);
 
-        return map_functions((DWORD64)entrypoint_address, entrypoint_address);
+        return map_functions((DWORD64)mods[0].base, entrypoint_address);
     }
-    return (stFunctionMap) nullptr;
+    return (stFunctionMap)nullptr;
 }
