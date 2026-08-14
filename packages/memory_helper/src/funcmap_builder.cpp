@@ -4,15 +4,49 @@
 #include <sstream>
 #include "funcmap_builder.h"
 #include "utils.h"
+#include <Zydis/Zydis.h>
 
-BYTE* funcmap_builder::parse_entrypoint(HMODULE hModule, BYTE* filebuffer)
+funcmap_builder::C_FunctionMap* funcmap_builder::ConvertToC(stFunctionMap* cppMap)
+{
+    auto* cMap = new C_FunctionMap();
+    cMap->asmcode = cppMap->asmcode.c_str();
+
+    cMap->subCount = cppMap->subFunctions.size();
+    if (cMap->subCount > 0)
+    {
+        cMap->subKeys = new DWORD64[cMap->subCount];
+        cMap->subValues = new C_FunctionMap[cMap->subCount];
+
+        size_t i = 0;
+        for (auto& [key, value] : cppMap->subFunctions)
+        {
+            cMap->subKeys[i] = key;
+            cMap->subValues[i] = *ConvertToC(&value);
+            i++;
+        }
+    }
+    else
+    {
+        cMap->subKeys = nullptr;
+        cMap->subValues = nullptr;
+    }
+    return cMap;
+}
+
+DWORD64 funcmap_builder::parse_entrypoint(HMODULE hModule, const char* filebuffer)
 {
     IMAGE_DOS_HEADER* dosHeader = (IMAGE_DOS_HEADER*)filebuffer;
     if (dosHeader->e_magic != IMAGE_DOS_SIGNATURE)
-        return nullptr;
+    {
+        printf("1\n");
+        return 0;
+    }
     IMAGE_NT_HEADERS* ntHeaders = (IMAGE_NT_HEADERS*)(filebuffer + dosHeader->e_lfanew);
     if (ntHeaders->Signature != IMAGE_NT_SIGNATURE)
-        return nullptr;
+    {
+        printf("21\n");
+        return 0;
+    }
     DWORD                 entryRVA = ntHeaders->OptionalHeader.AddressOfEntryPoint;
     IMAGE_SECTION_HEADER* sec = IMAGE_FIRST_SECTION(ntHeaders);
     DWORD                 fileOffset = 0;
@@ -25,9 +59,9 @@ BYTE* funcmap_builder::parse_entrypoint(HMODULE hModule, BYTE* filebuffer)
         }
     }
 
-    BYTE* entryBytes = filebuffer + fileOffset;
+    DWORD64 entryBytes = (DWORD64)filebuffer + fileOffset;
 
-    return (DWORD64)hModule, entryBytes;
+    return (DWORD64)hModule + entryBytes;
 }
 
 funcmap_builder::stFunctionMap funcmap_builder::map_functions(DWORD64 dwRuntimeAddress, void* buffer)
@@ -85,14 +119,17 @@ funcmap_builder::stFunctionMap funcmap_builder::build_funcmap(HANDLE hProcess)
 
     if (QueryFullProcessImageName(hProcess, NULL, szFilePath, &dwSize))
     {
+        printf("parsing file: %s\n", szFilePath);
         std::ifstream      file(szFilePath);
         std::ostringstream ss;
         ss << file.rdbuf();
-        const char* filebuffer = ss.str().c_str();
-        BYTE*       entrypoint_address = parse_entrypoint((HMODULE)mods[0].base, (BYTE*)filebuffer);
+        auto          str = ss.str();
+        const char* filebuffer = str.c_str();
+        DWORD64       entrypoint_address = parse_entrypoint((HMODULE)mods[0].base, filebuffer);
         printf("entrypoint_address: %p\n", entrypoint_address);
 
-        return map_functions((DWORD64)mods[0].base, entrypoint_address);
+        return map_functions((DWORD64)mods[0].base, (void*)entrypoint_address);
     }
+    printf("qsd\n");
     return (stFunctionMap)nullptr;
 }
