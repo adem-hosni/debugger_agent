@@ -45,12 +45,9 @@ def format_type(type_: int) -> str:
 def format_protect(protect: int) -> str:
     if protect == 0:
         return "-"  # free regions report Protect == 0
-
     base_flag = protect & 0xFF
     base = PAGE_PROTECT_BASE.get(base_flag, f"UNKNOWN_PROTECT(0x{base_flag:X})")
-
     modifiers = [name for bit, name in PAGE_PROTECT_MODIFIERS.items() if protect & bit]
-
     if modifiers:
         return f"{base} | {' | '.join(modifiers)}"
     return base
