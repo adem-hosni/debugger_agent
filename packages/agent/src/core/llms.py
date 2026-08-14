@@ -21,7 +21,6 @@ def build_model_kwargs(model_config: ModelConfig = ModelConfig()) -> dict[str, A
     }
     if model_config.max_tokens is not None:
         kwargs["max_tokens"] = model_config.max_tokens
-
     if model_config.top_p is not None:
         kwargs["top_p"] = model_config.top_p
     if model_config.openrouter_app_url:
@@ -33,9 +32,7 @@ def build_model_kwargs(model_config: ModelConfig = ModelConfig()) -> dict[str, A
 
 def _build_orchestrator_llm() -> ChatOpenAI:
     load_dotenv()
-
     settings = get_settings()
-
     return ChatOpenAI(
         model=settings.model.provider_model,
         temperature=settings.model.temperature,
