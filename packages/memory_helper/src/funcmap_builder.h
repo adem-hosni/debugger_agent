@@ -1,6 +1,8 @@
 #pragma once
-#include "main.hpp"
+#pragma once
+#include <Windows.h>
 #include <map>
+#include <string>
 
 namespace funcmap_builder
 {
@@ -9,9 +11,17 @@ namespace funcmap_builder
         std::string                      asmcode;
         std::map<DWORD64, stFunctionMap> subFunctions{};
     };
+    struct C_FunctionMap
+    {
+        const char*    asmcode;
+        DWORD64*       subKeys;
+        C_FunctionMap* subValues;
+        size_t         subCount;
+    };
 
-    BYTE*         parse_entrypoint(HMODULE hModule, BYTE* filebuffer);
-    stFunctionMap map_functions(DWORD64 dwRuntimeAddress, void* buffer);
+    C_FunctionMap* ConvertToC(stFunctionMap* cppMap);
+    DWORD64        parse_entrypoint(HMODULE hModule, const char* filebuffer);
+    stFunctionMap  map_functions(DWORD64 dwRuntimeAddress, void* buffer);
 
     stFunctionMap build_funcmap(HANDLE hProcess);
 };            // namespace funcmap_builder
