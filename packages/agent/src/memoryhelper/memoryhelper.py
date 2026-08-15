@@ -108,11 +108,7 @@ class MemoryHelper:
         return self.c_patch_bytes(self.__target_handle, address, bytes_, size)
 
     def build_funcmap(self) -> dict:
-        try:
-            c_map_ptr = self.c_build_funcmap(self.__target_handle)
-        except Exception as ex:
-            print(ex)
-        return self.__unpack_c_map(c_map_ptr)
+        return self.__unpack_c_map(self.c_build_funcmap(self.__target_handle))
 
     def __disassemble_regions_worker(self, regions: MemoryRegionsList, result: list):
         codes = []
