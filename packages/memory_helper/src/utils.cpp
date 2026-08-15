@@ -8,7 +8,6 @@ std::vector<utils::ModuleRange> utils::GetModulesRanges(HANDLE hProcess)
     std::vector<ModuleRange> modules;
     HMODULE                  hMods[1];
     DWORD                    cbNeeded;
-
     if (K32EnumProcessModules(hProcess, hMods, sizeof(hMods), &cbNeeded))
     {
         MODULEINFO mi;
@@ -37,20 +36,16 @@ bool utils::IsUserModule(HANDLE hProcess, LPVOID lpBaseAddress, DWORD dwSize)
         wchar_t path[MAX_PATH] = {};
         if (!GetModuleFileNameExW(hProcess, (HMODULE)mi.lpBaseOfDll, path, MAX_PATH))
             return false;            // couldn't resolve, treat as unknown/non-system
-
         wchar_t systemDir[MAX_PATH], windowsDir[MAX_PATH];
         GetSystemDirectoryW(systemDir, MAX_PATH);
         GetWindowsDirectoryW(windowsDir, MAX_PATH);
-
         std::wstring lowerPath = path;
         std::wstring sys = systemDir;
         std::wstring win = windowsDir;
         std::transform(lowerPath.begin(), lowerPath.end(), lowerPath.begin(), ::towlower);
         std::transform(sys.begin(), sys.end(), sys.begin(), ::towlower);
         std::transform(win.begin(), win.end(), win.begin(), ::towlower);
-
         return !(lowerPath.find(sys) == 0 || lowerPath.find(win + L"\\syswow64") == 0 || lowerPath.find(win + L"\\winsxs") == 0);
-
     }
     return false;
 }
