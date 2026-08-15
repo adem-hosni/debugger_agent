@@ -13,7 +13,7 @@ std::vector<utils::ModuleRange> utils::GetModulesRanges(HANDLE hProcess)
     {
         MODULEINFO mi;
         if (K32GetModuleInformation(hProcess, hMods[0], &mi, sizeof(mi)))
-            modules.push_back({reinterpret_cast<uintptr_t>(mi.lpBaseOfDll), mi.SizeOfImage});
+            modules.push_back({reinterpret_cast<DWORD64>(mi.lpBaseOfDll), mi.SizeOfImage});
     }
     return modules;
 }
