@@ -11,13 +11,11 @@ funcmap_builder::C_FunctionMap* funcmap_builder::ConvertToC(stFunctionMap* cppMa
 {
     auto* cMap = new C_FunctionMap();
     cMap->asmcode = cppMap->asmcode.c_str();
-
     cMap->subCount = cppMap->subFunctions.size();
     if (cMap->subCount > 0)
     {
         cMap->subKeys = new DWORD64[cMap->subCount];
         cMap->subValues = new C_FunctionMap[cMap->subCount];
-
         size_t i = 0;
         for (auto& [key, value] : cppMap->subFunctions)
         {
@@ -38,16 +36,10 @@ DWORD64 funcmap_builder::parse_entrypoint(DWORD64 dwProcessBaseAddress, const ch
 {
     IMAGE_DOS_HEADER* dosHeader = (IMAGE_DOS_HEADER*)filebuffer;
     if (dosHeader->e_magic != IMAGE_DOS_SIGNATURE)
-    {
-        printf("1\n");
         return 0;
-    }
     IMAGE_NT_HEADERS* ntHeaders = (IMAGE_NT_HEADERS*)(filebuffer + dosHeader->e_lfanew);
-    if (ntHeaders->Signature != IMAGE_NT_SIGNATURE)
-    {
-        printf("21\n");
+    if (ntHeaders->Signature != IMAGE_NT_SIGNATURE) 
         return 0;
-    }
     DWORD                 entryRVA = ntHeaders->OptionalHeader.AddressOfEntryPoint;
     IMAGE_SECTION_HEADER* sec = IMAGE_FIRST_SECTION(ntHeaders);
     DWORD                 fileOffset = 0;
