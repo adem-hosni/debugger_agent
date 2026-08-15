@@ -5,6 +5,9 @@ from dotenv import load_dotenv
 
 from config import get_settings
 from config.settings import AgentConfig, ModelConfig, get_settings
+from deepagents import create_deep_agent
+
+from tools import get_orchestrator_tools, get_default_tools
 
 
 def load_prompt(prompt_file: str) -> str | None:
@@ -42,4 +45,20 @@ def _build_orchestrator_llm() -> ChatOpenAI:
     )
 
 
-orchestrator_llm = _build_orchestrator_llm()
+tools = get_default_tools() + get_orchestrator_tools()
+orchestrator_llm = _build_orchestrator_llm().bind_tools(tools)
+
+
+def build_orchestrator_agent(
+    name: str | None = None, system_prompt: str | None = load_prompt("system_prompt.md")
+):
+    return create_deep_agent(
+        model=orchestrator_llm,
+        tools=tools,
+        name=name,
+        system_prompt=system_prompt,
+        memory=[]
+    )
+
+
+orchestrator_agent = build_orchestrator_agent("main-orchestrator")
