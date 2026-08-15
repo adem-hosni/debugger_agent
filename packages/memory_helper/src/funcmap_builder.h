@@ -1,8 +1,10 @@
 #pragma once
-#pragma once
 #include <Windows.h>
 #include <map>
 #include <string>
+#include <set>
+
+#define NT_SUCCESS(Status) (((NTSTATUS)(Status)) >= 0)
 
 namespace funcmap_builder
 {
@@ -20,8 +22,8 @@ namespace funcmap_builder
     };
 
     C_FunctionMap* ConvertToC(stFunctionMap* cppMap);
-    DWORD64        parse_entrypoint(HMODULE hModule, const char* filebuffer);
-    stFunctionMap  map_functions(DWORD64 dwRuntimeAddress, void* buffer);
+    DWORD64        parse_entrypoint(DWORD64 dwProcessBase, const char* filebuffer);
+    stFunctionMap  map_functions(HANDLE hProcess, DWORD64 dwRuntimeAddress, std::set<DWORD64>& visitedAddresses);
 
     stFunctionMap build_funcmap(HANDLE hProcess);
 };            // namespace funcmap_builder

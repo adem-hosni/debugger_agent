@@ -2,9 +2,10 @@
 
 #include <fstream>
 #include <sstream>
+#include <Zydis/Zydis.h>
+#include "kernel_calls.hpp"
 #include "funcmap_builder.h"
 #include "utils.h"
-#include <Zydis/Zydis.h>
 
 funcmap_builder::C_FunctionMap* funcmap_builder::ConvertToC(stFunctionMap* cppMap)
 {
@@ -33,7 +34,7 @@ funcmap_builder::C_FunctionMap* funcmap_builder::ConvertToC(stFunctionMap* cppMa
     return cMap;
 }
 
-DWORD64 funcmap_builder::parse_entrypoint(HMODULE hModule, const char* filebuffer)
+DWORD64 funcmap_builder::parse_entrypoint(DWORD64 dwProcessBaseAddress, const char* filebuffer)
 {
     IMAGE_DOS_HEADER* dosHeader = (IMAGE_DOS_HEADER*)filebuffer;
     if (dosHeader->e_magic != IMAGE_DOS_SIGNATURE)
@@ -58,78 +59,91 @@ DWORD64 funcmap_builder::parse_entrypoint(HMODULE hModule, const char* filebuffe
             break;
         }
     }
-
-    DWORD64 entryBytes = (DWORD64)filebuffer + fileOffset;
-
-    return (DWORD64)hModule + entryBytes;
+    return (DWORD64)dwProcessBaseAddress + entryRVA;
 }
 
-funcmap_builder::stFunctionMap funcmap_builder::map_functions(DWORD64 dwRuntimeAddress, void* buffer)
+funcmap_builder::stFunctionMap funcmap_builder::map_functions(HANDLE hProcess, DWORD64 dwRuntimeAddress, std::set<DWORD64>& visitedAddresses)
 {
+    printf("Mapping function at address: %p", (PVOID)dwRuntimeAddress);
+    MEMORY_BASIC_INFORMATION MemoryRegion{};
+    SIZE_T                   returnLength = 0;
+    if (!NT_SUCCESS(SysNtQueryVirtualMemory(hProcess, (PVOID)dwRuntimeAddress, MemoryBasicInformation, &MemoryRegion, sizeof(MemoryRegion), &returnLength)))
+    {
+        printf("Failed to query function memory at address: %p\n", (PVOID)dwRuntimeAddress);
+        return {};
+    }
+    printf(" Region Size: 0x%zx bytes\n", MemoryRegion.RegionSize);
+    std::vector<BYTE> buffer(MemoryRegion.RegionSize, 0);
+    if (!NT_SUCCESS(SysNtReadVirtualMemory(hProcess, (PVOID)dwRuntimeAddress, buffer.data(), MemoryRegion.RegionSize, NULL)))
+    {
+        printf("Failed to read function memory at address: %p\n", (PVOID)dwRuntimeAddress);
+        return {};
+    }
     stFunctionMap functionMap;
-
-    ZydisDecoder decoder;
+    ZydisDecoder  decoder;
     ZydisDecoderInit(&decoder, ZYDIS_MACHINE_MODE_LONG_64, ZYDIS_STACK_WIDTH_64);
-
     ZydisFormatter formatter;
     ZydisFormatterInit(&formatter, ZYDIS_FORMATTER_STYLE_INTEL);
-
     ZyanUSize               offset = 0;
     ZydisDecodedInstruction instr;
     ZydisDecodedOperand     operands[ZYDIS_MAX_OPERAND_COUNT];
-
-    std::string output;
-
-    for (int i = 0; i < 20 && ZYAN_SUCCESS(ZydisDecoderDecodeFull(&decoder, buffer, 0x20, &instr, operands)); i++)
+    std::string             output;
+    while (offset < MemoryRegion.RegionSize &&
+           ZYAN_SUCCESS(ZydisDecoderDecodeFull(&decoder, buffer.data() + offset, MemoryRegion.RegionSize - offset, &instr, operands)))
     {
-        char buf[256];
-        ZydisFormatterFormatInstruction(&formatter, &instr, operands, instr.operand_count_visible, buf, sizeof(buf), dwRuntimeAddress + offset, NULL);
-
+        ZyanU64 current_instr_address = dwRuntimeAddress + offset;
+        char    buf[256];
+        ZydisFormatterFormatInstruction(&formatter, &instr, operands, instr.operand_count_visible, buf, sizeof(buf), current_instr_address, NULL);
         char addrbuf[32];
-        memset(addrbuf, 0, sizeof(addrbuf));
-        sprintf(addrbuf, "%016llX  ", dwRuntimeAddress + offset);
+        sprintf_s(addrbuf, sizeof(addrbuf), "%016llX  ", current_instr_address);
         output += addrbuf;
         output += buf;
         output += "\n";
-
-        if (instr.meta.category == ZYDIS_CATEGORY_COND_BR || (instr.meta.category == ZYDIS_CATEGORY_UNCOND_BR && instr.mnemonic == ZYDIS_MNEMONIC_JMP))
+        if (instr.meta.category == ZYDIS_CATEGORY_COND_BR || instr.meta.category == ZYDIS_CATEGORY_UNCOND_BR || instr.meta.category == ZYDIS_CATEGORY_CALL)
         {
-            if (operands[0].type == ZYDIS_OPERAND_TYPE_IMMEDIATE)
+            if (instr.operand_count > 0 && operands[0].type == ZYDIS_OPERAND_TYPE_IMMEDIATE)
             {
                 ZyanU64 target_address = 0;
-                ZydisCalcAbsoluteAddress(&instr, &operands[0], dwRuntimeAddress, &target_address);
-
-                functionMap.subFunctions[(DWORD64)target_address] = map_functions(target_address, (BYTE*)buffer + offset + instr.length);
+                if (ZYAN_SUCCESS(ZydisCalcAbsoluteAddress(&instr, &operands[0], current_instr_address, &target_address)))
+                {
+                    DWORD64 target64 = (DWORD64)target_address;
+                    if (visitedAddresses.find(target64) == visitedAddresses.end())
+                    {
+                        visitedAddresses.insert(target64);
+                        functionMap.subFunctions[target64] = map_functions(hProcess, target64, visitedAddresses);
+                    }
+                }
+            }
+        }
+        if (instr.mnemonic == ZYDIS_MNEMONIC_INT3 && (offset + instr.length < MemoryRegion.RegionSize))
+        {
+            if (buffer[offset + instr.length] == 0xCC)
+            {
+                offset += instr.length;
+                break;
             }
         }
         offset += instr.length;
     }
-
     functionMap.asmcode = output;
-
     return functionMap;
-};
+}
 
 funcmap_builder::stFunctionMap funcmap_builder::build_funcmap(HANDLE hProcess)
 {
-    auto mods = utils::GetUserModules(hProcess);
-
+    auto  mods = utils::GetUserModules(hProcess);
     char  szFilePath[MAX_PATH];
     DWORD dwSize = MAX_PATH;
-
     if (QueryFullProcessImageName(hProcess, NULL, szFilePath, &dwSize))
     {
-        printf("parsing file: %s\n", szFilePath);
-        std::ifstream      file(szFilePath);
+        std::ifstream      file(szFilePath, std::ios::binary);
         std::ostringstream ss;
         ss << file.rdbuf();
-        auto          str = ss.str();
-        const char* filebuffer = str.c_str();
-        DWORD64       entrypoint_address = parse_entrypoint((HMODULE)mods[0].base, filebuffer);
-        printf("entrypoint_address: %p\n", entrypoint_address);
-
-        return map_functions((DWORD64)mods[0].base, (void*)entrypoint_address);
+        auto              str = ss.str();
+        const char*       filebuffer = str.data();
+        DWORD64           entrypoint_address = parse_entrypoint((DWORD64)mods[0].base, filebuffer);
+        std::set<DWORD64> visitedAddresses;
+        return map_functions(hProcess, entrypoint_address, visitedAddresses);
     }
-    printf("qsd\n");
-    return (stFunctionMap)nullptr;
+    return {};
 }
