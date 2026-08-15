@@ -108,7 +108,11 @@ class MemoryHelper:
         return self.c_patch_bytes(self.__target_handle, address, bytes_, size)
 
     def build_funcmap(self) -> dict:
-        return self.__unpack_c_map(self.c_build_funcmap(self.__target_handle))
+        try:
+            c_map_ptr = self.c_build_funcmap(self.__target_handle)
+        except Exception as ex:
+            print(ex)
+        return self.__unpack_c_map(c_map_ptr)
 
     def __disassemble_regions_worker(self, regions: MemoryRegionsList, result: list):
         codes = []
@@ -158,7 +162,7 @@ class MemoryHelper:
             for i in range(count):
                 key = keys_array[i]
                 sub_struct_ptr = c.POINTER(C_FunctionMap)(values_array[i])
-                result["subFunctions"][key] = self.__unpack_c_map(sub_struct_ptr)
+                result["subFunctions"][f"{key:X}"] = self.__unpack_c_map(sub_struct_ptr)
         return result
 
     def get_last_error(self) -> int:
