@@ -16,16 +16,32 @@ class OrchestratorAgent(AgentBase):
             "main-orchestrator",
             tools=get_default_tools()
             + [
-                self.current_code,
-                self.current_offset,
-                self.list_functions_offsets,
-                self.set_current_offset,
+                tool(
+                    self.get_current_function_code, description="Returns the current function code"
+                ),
+                tool(
+                    self.get_current_function_offset,
+                    description="Returns current function offset (0 = entrypoint)",
+                ),
+                tool(
+                    self.list_functions_offsets,
+                    description="List the functions offsets that can be called by the current function ",
+                ),
+                tool(
+                    self.set_current_offset_and_get_func_code,
+                    description="Move the current offset to a target function offset. Returns the target offset function code",
+                ),
             ],
         )
         self.__mem_helper = MemoryHelper()
         self.__funcmap: FunctionMap | None = None
         self.__current_node: FunctionNode | None = None
-        self.state: OrchestratorState = {}
+        self.state: OrchestratorState = {
+            "messages": [],
+            "strings": {},
+            "current_offset": "",
+            "memory": [],
+        }
         self.subagents: list[SubAgent] = []
 
     def bind(self, process_name: str) -> bool:
@@ -35,40 +51,63 @@ class OrchestratorAgent(AgentBase):
         self.__funcmap = self.__mem_helper.build_funcmap()
         self.__current_node = self.__funcmap
 
-    @tool(description="Returns the current function code")
-    def current_code(self) -> str:
+    def get_current_function_code(self) -> str:
         return self.__current_node.asm_code
 
-    @tool(description="Returns current function offset (0 = entrypoint)")
-    def current_offset(self) -> str:
+    def get_current_function_offset(self) -> str:
         return self.__current_node.asm_code
 
-    @tool(
-        description="List the functions offsets that can be called by the current function "
-    )
     def list_functions_offsets(self) -> list[str]:
+        if not self.__current_node:
+            return []
         return [node.offset for node in self.__current_node.inner_nodes]
 
-    @tool(
-        description="Move the current offset to a target function offset. Returns the target offset function code"
-    )
-    def set_current_offset(self, offset: str) -> str:
-        self.__current_node = self.__funcmap.find_node(offset)
-        if not self.__current_node:
+    def set_current_offset_and_get_func_code(self, offset: str) -> str:
+        node = self.__funcmap.find_node(offset)
+        if not node:
             return "Error: Function with this offset could not be found"
+        self.__current_node = node
         return self.__current_node.asm_code
 
-    @tool(description="Patch a target memory offset by a given string bytes sequence (hexadecimal representation)")
+    # @tool(
+    #     description="Patch a target memory offset by a given string bytes sequence (hexadecimal representation)"
+    # )
     def patch_bytes(self, memory_offset: str, bytes_sequence: str):
         print(f"patching {memory_offset} with {bytes_sequence}")
         bytes_ = [int(byte, base=16) for byte in bytes_sequence.split(" ")]
-        self.__mem_helper.patch_bytes_from_addr(int(memory_offset, base=16))
+        self.__mem_helper.patch_bytes_from_addr(
+            int(memory_offset, base=16), bytes_, len(bytes_)
+        )
 
     def spawn_subagent(self, start_offset: str): ...
 
     def debug_assembly(self):
-        for mode, payload in self._invoke("Crack this given crackme by patching some bytes in the code. Tell me what bytes need to change before patching"):
-            print(f"{mode}: {payload}")
+        for mode, payload in self._invoke(
+            "Crack this given crackme by patching some bytes in the code. (Call get_current_function_code() to get the entrypoint assembly code)"
+            "Tell me what bytes need to change before patching."
+            "Navigate with your navigation tools. And when you complete tell me what things you wish me cleared at first"
+        ):
+            if mode == "messages":
+                chunk, metadata = payload
+
+                if chunk.content:
+                    print(chunk.content, flush=True, end="")
+
+            elif mode == "updates":
+                for node_name, values in payload.items():
+                    if not isinstance(values, dict):
+                        continue
+
+                    messages = values.get("messages", [])
+
+                    if not messages:
+                        continue
+
+                    last_msg = messages[-1]
+
+                    for tool in getattr(last_msg, "tool_calls", []):
+                        print(f"\n⚡ ACTION: {tool.get('name', 'unknown')}")
+                        print(f"   ARGS: {tool.get('args', {})}")
 
     def _invoke(self, message: str):
         self.state["messages"].append(HumanMessage(message))
