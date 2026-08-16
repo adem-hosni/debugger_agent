@@ -9,7 +9,7 @@ class FunctionNode:
         self.inner_nodes: set[FunctionNode] = set()
 
     def find_node(self, offset: str) -> Self | None:
-        if offset == self.offset:
+        if offset == self.offset or offset == "0x" + self.offset:
             return self
         for inner_node in self.inner_nodes:
             if inner_node.find_node(offset):
