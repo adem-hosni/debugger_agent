@@ -1,3 +1,5 @@
+__all__ = ["MemoryHelper", "MemoryRegionsList"]
+
 from .ctypes import *
 import threading
 import psutil
@@ -9,6 +11,7 @@ import json
 from contextlib import suppress
 from typing import Any
 
+from .funcmap import FunctionMap
 from .signatures import *
 from .mem_flags import *
 
@@ -108,7 +111,7 @@ class MemoryHelper:
         return self.c_patch_bytes(self.__target_handle, address, bytes_, size)
 
     def build_funcmap(self) -> dict:
-        return self.__unpack_c_map(self.c_build_funcmap(self.__target_handle))
+        return FunctionMap(self.__unpack_c_map(self.c_build_funcmap(self.__target_handle)))
 
     def __disassemble_regions_worker(self, regions: MemoryRegionsList, result: list):
         codes = []
