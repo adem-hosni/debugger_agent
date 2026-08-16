@@ -9,7 +9,7 @@ class ModelConfig(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="MODEL_", extra="ignore")
 
     provider_model: str = Field(
-        default="openrouter:deepseek/deepseek-chat-v3",
+        default="openrouter:deepseek/deepseek-v4-pro",
         description="Model identifier in provider:model format",
     )
     temperature: float = Field(default=0.7, ge=0.0, le=2.0)
