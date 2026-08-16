@@ -46,17 +46,18 @@ def _build_orchestrator_llm() -> ChatOpenAI:
     )
 
 
-
-
 def build_orchestrator_agent(
-    name: str | None = None, system_prompt: str | None = load_prompt("system_prompt.md"), tools: list = []
+    name: str | None = None,
+    system_prompt: str | None = load_prompt("system_prompt.md"),
+    tools: list = [],
 ):
-    orchestrator_llm = _build_orchestrator_llm().bind_tools(tools)
+    orchestrator_llm = _build_orchestrator_llm()
+    
     return create_deep_agent(
         model=orchestrator_llm,
         tools=tools,
         name=name,
         system_prompt=system_prompt,
         memory=[],
-        state_schema=OrchestratorState
+        state_schema=OrchestratorState,
     )
