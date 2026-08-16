@@ -1,11 +1,11 @@
 from memoryhelper.memoryhelper import MemoryHelper
+from agents.orchestrator import OrchestratorAgent
 
 def main():
-    mem_helper = MemoryHelper()
-    if not mem_helper.attach("level1easy.exe"):
-        print(f"Failed to attach to the target process! {mem_helper.get_last_error()}")
-        return
-    print(mem_helper.build_funcmap())
+    agent = OrchestratorAgent()
+    agent.bind("level1easy.exe")
+    agent.map_functions()
+    print("Completed!")
 
 
 if __name__ == "__main__":
