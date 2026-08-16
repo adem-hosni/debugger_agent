@@ -107,8 +107,8 @@ class MemoryHelper:
             f.write(json.dumps(results, indent=4))
         return results
 
-    def patch_bytes_from_addr(self, address: LPVOID, bytes_: CHAR_PTR, size: SIZE_T):
-        return self.c_patch_bytes(self.__target_handle, address, bytes_, size)
+    def patch_bytes_from_addr(self, address: str, bytes_: list[int], size: int):
+        return self.c_patch_bytes(self.__target_handle, LPVOID(address), CHAR_PTR(bytes(bytes_)), SIZE_T(size))
 
     def build_funcmap(self) -> dict:
         return FunctionMap(self.__unpack_c_map(self.c_build_funcmap(self.__target_handle)))
