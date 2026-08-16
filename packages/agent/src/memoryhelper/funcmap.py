@@ -6,7 +6,7 @@ class FunctionNode:
     def __init__(self, offset: str, asm_code: str):
         self.offset = offset
         self.asm_code = asm_code
-        self.inner_nodes: list[FunctionNode] = []
+        self.inner_nodes: set[FunctionNode] = set()
 
     def find_node(self, offset: str) -> Self | None:
         if offset == self.offset:
@@ -17,9 +17,9 @@ class FunctionNode:
 
     def parse_inner_nodes(self, node_map: dict[str, Any]):
         for offset, v in node_map.get("subFunctions", {}).items():
-            node = FunctionNode(offset, v.get("asmcode") if isinstance(v, dict) else v)
-            self.inner_nodes.append(node)
-            node.parse_inner_nodes(v["subFunctions"])
+            node = FunctionNode(offset, v["asmcode"])
+            node.parse_inner_nodes(v)
+            self.inner_nodes.add(node)
 
 
 class FunctionMap(FunctionNode):
