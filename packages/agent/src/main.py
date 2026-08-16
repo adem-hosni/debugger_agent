@@ -5,6 +5,7 @@ def main():
     agent = OrchestratorAgent()
     agent.bind("level1easy.exe")
     agent.map_functions()
+    agent.debug_assembly()
     print("Completed!")
 
 
