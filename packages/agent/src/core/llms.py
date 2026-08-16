@@ -1,11 +1,12 @@
 from typing import Any
 import os
-from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
-
-from config import get_settings
-from config.settings import AgentConfig, ModelConfig, get_settings
+from langchain_openai import ChatOpenAI
 from deepagents import create_deep_agent
+
+from core.states import OrchestratorState
+from config import get_settings
+from config.settings import ModelConfig, get_settings
 
 from tools import get_orchestrator_tools, get_default_tools
 
@@ -45,20 +46,17 @@ def _build_orchestrator_llm() -> ChatOpenAI:
     )
 
 
-tools = get_default_tools() + get_orchestrator_tools()
-orchestrator_llm = _build_orchestrator_llm().bind_tools(tools)
 
 
 def build_orchestrator_agent(
-    name: str | None = None, system_prompt: str | None = load_prompt("system_prompt.md")
+    name: str | None = None, system_prompt: str | None = load_prompt("system_prompt.md"), tools: list = []
 ):
+    orchestrator_llm = _build_orchestrator_llm().bind_tools(tools)
     return create_deep_agent(
         model=orchestrator_llm,
         tools=tools,
         name=name,
         system_prompt=system_prompt,
-        memory=[]
+        memory=[],
+        state_schema=OrchestratorState
     )
-
-
-orchestrator_agent = build_orchestrator_agent("main-orchestrator")
