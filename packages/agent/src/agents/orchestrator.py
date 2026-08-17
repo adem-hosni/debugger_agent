@@ -64,9 +64,13 @@ class OrchestratorAgent(AgentBase):
 
     def set_current_offset_and_get_func_code(self, offset: str) -> str:
         node = self.__funcmap.find_node(offset)
-        if not node:
-            return "Error: Function with this offset could not be found"
+        if not node or not node.asm_code:
+            return f"Error: Function with this offset {offset} could not be found"
         self.__current_node = node
+        if not len(self.__current_node.asm_code):
+            print("#"*50)
+            print("RET IS NULL")
+            print("#"*50)
         return self.__current_node.asm_code
 
     # @tool(
@@ -82,38 +86,130 @@ class OrchestratorAgent(AgentBase):
     def spawn_subagent(self, start_offset: str): ...
 
     def debug_assembly(self):
-        for mode, payload in self._invoke(
-            "Crack this given crackme by patching some bytes in the code. (Call get_current_function_code() to get the entrypoint assembly code)"
-            "Tell me what bytes need to change before patching."
-            "Navigate with your navigation tools. And when you complete tell me what things you wish me cleared at first"
-        ):
+        message = (
+            "Crack this given crackme by patching some bytes in the code. "
+            "(Call get_current_function_code() to get the entrypoint assembly code.)\n"
+            "Tell me what bytes need to change before patching.\n"
+            "Navigate with your navigation tools.\n"
+            "When you complete, tell me what things you wish me cleared at first."
+        )
+
+        for mode, payload in self._invoke(message):
+
+            # ============================================================
+            # LLM TOKEN STREAM
+            # ============================================================
             if mode == "messages":
                 chunk, metadata = payload
 
-                if chunk.content:
-                    print(chunk.content, flush=True, end="")
+                # Ignore empty chunks
+                if not chunk.content:
+                    continue
 
+                # content can sometimes be a list depending on the model
+                if isinstance(chunk.content, list):
+                    text = ""
+
+                    for item in chunk.content:
+                        if isinstance(item, dict):
+                            text += item.get("text", "")
+                        elif isinstance(item, str):
+                            text += item
+
+                else:
+                    text = str(chunk.content)
+
+                if text:
+                    print(text, end="", flush=True)
+
+            # ============================================================
+            # GRAPH NODE UPDATES
+            # ============================================================
             elif mode == "updates":
+
                 for node_name, values in payload.items():
+
                     if not isinstance(values, dict):
                         continue
+
+                    print(
+                        f"\n\n{'─' * 60}\n"
+                        f"🔄 NODE: {node_name}\n"
+                        f"{'─' * 60}",
+                        flush=True
+                    )
 
                     messages = values.get("messages", [])
 
                     if not messages:
                         continue
 
-                    last_msg = messages[-1]
+                    for msg in messages:
 
-                    for tool in getattr(last_msg, "tool_calls", []):
-                        print(f"\n⚡ ACTION: {tool.get('name', 'unknown')}")
-                        print(f"   ARGS: {tool.get('args', {})}")
+                        # ------------------------------------------------
+                        # Assistant message
+                        # ------------------------------------------------
+                        content = getattr(msg, "content", None)
+
+                        if content:
+                            if isinstance(content, list):
+                                for item in content:
+                                    if isinstance(item, dict):
+                                        text = item.get("text", "")
+                                        if text:
+                                            print(
+                                                f"🤖 {text}",
+                                                flush=True
+                                            )
+                            else:
+                                print(
+                                    f"🤖 {content}",
+                                    flush=True
+                                )
+
+                        # ------------------------------------------------
+                        # Tool calls
+                        # ------------------------------------------------
+                        tool_calls = getattr(msg, "tool_calls", [])
+
+                        for tool in tool_calls:
+
+                            name = tool.get("name", "unknown")
+                            args = tool.get("args", {})
+
+                            print(
+                                f"\n⚡ TOOL CALL\n"
+                                f"   ├─ {name}\n"
+                                f"   └─ args: {args}",
+                                flush=True
+                            )
+
+                        # ------------------------------------------------
+                        # Tool result 
+                        # ------------------------------------------------
+                        if getattr(msg, "type", None) == "tool":
+
+                            print(
+                                f"\n🔧 TOOL RESULT\n"
+                                f"{content}\n",
+                                flush=True
+                            )
+
 
     def _invoke(self, message: str):
-        self.state["messages"].append(HumanMessage(message))
-        return self._agent.stream(self.state, stream_mode=["messages", "updates"])
+        self.state["messages"].append(
+            HumanMessage(content=message)
+        )
 
+        return self._agent.stream(
+            self.state,
+            stream_mode=["messages", "updates"],
+        )
     @tool(
         description="List all the functions thats are inside the given target function"
     )
     def list_funcmaps(self, target_function: str): ...
+
+    @property
+    def function_map(self):
+        return self.__funcmap
