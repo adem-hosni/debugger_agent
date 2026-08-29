@@ -7,7 +7,9 @@
 [![Type Checked: MyPy](https://img.shields.io/badge/type%20checked-mypy-blue.svg)](https://mypy-lang.org/)
 [![Pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit)
 
-A professional debugger agent for reverse engineering crackmes, built with DeepAgents and OpenRouter. Features a Python AI agent with C++ memory helper for process debugging and disassembly.
+A professional debugger agent for reverse engineering & debugging programs in realtime, built with DeepAgents and OpenRouter. Features a Python AI agent with C++ memory helper for process debugging and disassembly.
+
+> DISCLAIMER: This repository is made for only educational purposes.
 
 ## Architecture
 
