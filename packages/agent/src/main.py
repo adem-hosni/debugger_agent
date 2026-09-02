@@ -6,6 +6,7 @@ def main():
     agent.bind("level1easy.exe")
     agent.map_functions()
     agent.debug_assembly()
+    # print(agent.function_map.find_node("00007FF627C82250"))
     print("Completed!")
 
 
