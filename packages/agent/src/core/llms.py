@@ -5,7 +5,7 @@ from langchain_openai import ChatOpenAI
 from deepagents import create_deep_agent
 
 from core.states import OrchestratorState
-from config import get_settings
+from config.config import get_settings
 from config.settings import ModelConfig, get_settings
 
 from tools import get_orchestrator_tools, get_default_tools
